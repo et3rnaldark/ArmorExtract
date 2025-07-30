@@ -12,23 +12,31 @@ class Nexo:
 
     def extract(self):
         os.makedirs("output/nexo", exist_ok=True)
+
+        # Unpack resource pack
         with ZipFile("Nexo/pack/pack.zip") as z:
             z.extractall("Nexo/pack")
 
-        data_files = glob.glob("Nexo/items/**/*.yml", recursive=True)
-        for file in data_files:
+        # Find .yml and .json item files
+        item_files = glob.glob("Nexo/items/**/*.*", recursive=True)
+        item_files = [f for f in item_files if f.endswith((".yml", ".json"))]
+
+        for file in item_files:
             try:
-                data = Utils.load_yaml(file)
-                if not isinstance(data, dict):
-                    print(f"\033[33mWarning:\033[0m Skipping non-dict YAML: {file}")
+                if file.endswith(".yml"):
+                    data = Utils.load_yaml(file)
+                elif file.endswith(".json"):
+                    data = Utils.load_json(file)
+                else:
                     continue
 
-                if "items" in data:
-                    data = data["items"]
+                if data is None or not isinstance(data, dict):
+                    print(f"\033[33mWarning:\033[0m Skipping invalid file: {file}")
+                    continue
 
                 for item_id, item in data.items():
                     if not isinstance(item, dict):
-                        print(f"\033[33mWarning:\033[0m Invalid item format in {file}: {item_id}")
+                        print(f"\033[33mWarning:\033[0m Skipping item in {file}: {item_id} (not a dict)")
                         continue
 
                     material = item.get("material", "")
@@ -79,7 +87,10 @@ class Nexo:
             base = f"{namespace}/textures/{path}"
         else:
             base = f"minecraft/textures/{tex}"
-        return f"{base}/armors/{os.path.basename(tex)}_armor_layer_{'2' if armor_type == 'leggings' else '1'}.png"
+
+        layer = "layer_2" if "leggings" in armor_type else "layer_1"
+        prefix = os.path.basename(base).split("_")[0]
+        return f"{os.path.dirname(base)}/{prefix}_armor_{layer}.png"
 
     def find_alternative_path(self, original_path: str) -> str | None:
         base = os.path.basename(original_path)
