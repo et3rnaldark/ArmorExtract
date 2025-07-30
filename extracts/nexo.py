@@ -11,11 +11,6 @@ class Nexo:
         self.armor_types = ["HELMET", "CHESTPLATE", "LEGGINGS", "BOOTS"]
 
     def extract(self):
-        import os
-        import glob
-        import shutil
-        from zipfile import ZipFile
-
         os.makedirs("output/nexo", exist_ok=True)
         with ZipFile("Nexo/pack/pack.zip") as z:
             z.extractall("Nexo/pack")
@@ -27,6 +22,9 @@ class Nexo:
                 if not isinstance(data, dict):
                     print(f"\033[33mWarning:\033[0m Skipping non-dict YAML: {file}")
                     continue
+
+                if "items" in data:
+                    data = data["items"]
 
                 for item_id, item in data.items():
                     if not isinstance(item, dict):
@@ -81,15 +79,7 @@ class Nexo:
             base = f"{namespace}/textures/{path}"
         else:
             base = f"minecraft/textures/{tex}"
-        layer = "layer_2" if "leggings" in armor_type else "layer_1"
-        prefix = os.path.splitext(os.path.basename(base))[0].split("_")[0]
-        return f"{os.path.dirname(base)}/{prefix}_armor_{layer}.png"
-
-    def find_alternative_path(self, original_path: str) -> str | None:
-        base = os.path.basename(original_path)
-        pattern = f"{os.path.dirname(original_path)}/{base.split('_')[0]}**_{base.split('_', 1)[-1]}"
-        matches = glob.glob(f"Nexo/pack/assets/{pattern}", recursive=True)
-        return matches[0] if matches else None
+        return f"{base}/armors/{os.path.basename(tex)}_armor_layer_{'2' if armor_type == 'leggings' else '1'}.png"
 
     def find_alternative_path(self, original_path: str) -> str | None:
         base = os.path.basename(original_path)
