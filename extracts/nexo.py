@@ -9,26 +9,43 @@ class Nexo:
         self.furnace_data = {"items": {}}
         self.armor_types = ["HELMET", "CHESTPLATE", "LEGGINGS", "BOOTS"]
 
-    def extract(self):
-        os.makedirs("output/nexo", exist_ok=True)
-        with ZipFile("Nexo/pack/pack.zip") as z: z.extractall("Nexo/pack")
-        data_files = glob.glob("Nexo/items/**/*.yml", recursive=True)
-        for file in data_files:
+def extract(self):
+    os.makedirs("output/nexo", exist_ok=True)
+    with ZipFile("Nexo/pack/pack.zip") as z:
+        z.extractall("Nexo/pack")
+
+    data_files = glob.glob("Nexo/items/**/*.yml", recursive=True)
+    for file in data_files:
+        try:
             data = Utils.load_yaml(file)
+            if not isinstance(data, dict):
+                print(f"\033[33mWarning:\033[0m Skipping non-dict YAML: {file}")
+                continue
+
             for item_id, item in data.items():
+                if not isinstance(item, dict):
+                    print(f"\033[33mWarning:\033[0m Invalid item format in {file}: {item_id}")
+                    continue
+
                 material = item.get("material", "")
-                model_id = item.get("Pack", {}).get("custom_model_data")
-                if not model_id or not any(t in material for t in self.armor_types): continue
-                textures = item.get("Pack", {}).get("textures") or [item.get("Pack", {}).get("texture")]
+                pack = item.get("Pack") or {}
+                model_id = pack.get("custom_model_data")
+
+                if not model_id or not any(t in material for t in self.armor_types):
+                    continue
+
+                textures = pack.get("textures") or [pack.get("texture")]
                 textures = [t for t in textures if t]
+
                 for tex in textures:
                     armor_type = self.get_armor_type(material).lower()
                     texture_path = self.build_texture_path(tex, armor_type)
                     full_src = os.path.join("Nexo/pack/assets", texture_path)
+
                     if not os.path.exists(full_src):
                         full_src = self.find_alternative_path(texture_path)
                         if not full_src:
-                            print(f"Missing texture: {texture_path}")
+                            print(f"\033[33mMissing texture:\033[0m {texture_path}")
                             continue
                         texture_path = os.path.relpath(full_src, "Nexo/pack/assets").replace("\\", "/")
 
@@ -44,8 +61,10 @@ class Nexo:
                         }
                     }
 
-        Utils.save_json("output/nexo/furnace.json", self.furnace_data)
+        except Exception as e:
+            print(f"\033[31mError processing file:\033[0m {file}\n\033[90m{e}\033[0m")
 
+    Utils.save_json("output/nexo/furnace.json", self.furnace_data)
     def get_armor_type(self, material: str) -> str:
         return next((t for t in self.armor_types if t in material), "UNKNOWN")
 
