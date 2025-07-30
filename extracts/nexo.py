@@ -75,11 +75,12 @@ class Nexo:
     def get_armor_type(self, material: str) -> str:
         return next((t for t in self.armor_types if t in material), "UNKNOWN")
 
-    def build_texture_path(self, tex: str, armor_type: str) -> str:
-        base = tex.replace(":", "/textures/") if ":" in tex else f"minecraft/textures/{tex}"
-        layer = "layer_2" if "leggings" in armor_type else "layer_1"
-        prefix = os.path.basename(base).split("_")[0]
-        return f"{os.path.dirname(base)}/{prefix}_armor_{layer}.png"
+    def build_texture_path(tex, armor_type):
+    if ":" in tex:
+        namespace, path = tex.split(":")
+        base = f"{namespace}/textures/{path}"
+    else:
+        base = f"minecraft/textures/{tex}"
 
     def find_alternative_path(self, original_path: str) -> str | None:
         base = os.path.basename(original_path)
